@@ -12,4 +12,4 @@ RUN dnf update -y \
     && chmod +x /opt/cloud_pay/cloudPay \
     && hostnamectl set-hostname fedora
 
-CMD["/opt/cloud_pay/cloudPay"]
+CMD ["/opt/cloud_pay/cloudPay"]
