@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Pay Sign In</title>
+
+    <!-- Custom style. -->
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: white;
+        }
+
+        #processing {
+            position: fixed;
+            right: 0;
+            left: 0;
+            bottom: 0;
+            top: 0;
+
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: white;
+            z-index: 30;
+            font-weight: bold;
+        }
+
+        main {
+            position: fixed;
+            right: 0;
+            left: 0;
+            bottom: 0;
+            top: 0;
+
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: white;
+        }
+
+        .code>span {
+            font-size: 1.2rem;
+            font-weight: bold;
+            letter-spacing: 0.2rem;
+        }
+
+        .code {
+            height: fit-content;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            position: fixed;
+            right: 0;
+            left: 0;
+            bottom: 10vmin;
+            top: auto;
+            color: #1f2937;
+            z-index: 20;
+        }
+
+        .hint {
+            width: 90vw;
+            text-align: left;
+            margin-bottom: 10vmin;
+            font-size: 1.5rem;
+            /* font-weight: bold; */
+            color: #1f2937;
+        }
+
+        .hint>span {
+            font-size: 2rem;
+            font-weight: bold;
+            color: black;
+        }
+
+        .image {
+            width: 90vw;
+            height: 90vw;
+            position: relative;
+        }
+
+        .image>img {
+            width: 100%;
+            height: 100%;
+            border-radius: 4vmin;
+        }
+
+        .cells {
+            position: absolute;
+            right: 0;
+            left: 0;
+            bottom: 0;
+            top: 0;
+            border-radius: 4vmin;
+
+            display: flex;
+            flex-wrap: wrap;
+            z-index: 10;
+        }
+
+        .cell:nth-child(1),
+        .cell_selected:nth-child(1) {
+            border-top-left-radius: 4vmin;
+        }
+
+        .cell:nth-child(3),
+        .cell_selected:nth-child(3) {
+            border-top-right-radius: 4vmin;
+        }
+
+        .cell:nth-child(7),
+        .cell_selected:nth-child(7) {
+            border-bottom-left-radius: 4vmin;
+        }
+
+        .cell:nth-child(9),
+        .cell_selected:nth-child(9) {
+            border-bottom-right-radius: 4vmin;
+        }
+
+        .cell {
+            background-color: white;
+            width: 30vw;
+            height: 30vw;
+            opacity: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cell_selected {
+            background-color: white;
+            width: 30vw;
+            height: 30vw;
+            opacity: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dot {
+            width: 5vmin;
+            height: 5vmin;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: white;
+            padding: 1vmin;
+            border-radius: 3vmin;
+            background-color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="processing">
+        Processing...
+    </div>
+
+    <main>
+        <div class="hint">
+            点击所有的 <span id="hint">?</span>
+        </div>
+        <div class="image">
+            <div class="cells">
+                <div id="cell-0" class="cell" data-value="0">
+                    <div class="dot">0</div>
+                </div>
+                <div id="cell-1" class="cell" data-value="1">
+                    <div class="dot">1</div>
+                </div>
+                <div id="cell-2" class="cell" data-value="2">
+                    <div class="dot">2</div>
+                </div>
+                <div id="cell-3" class="cell" data-value="3">
+                    <div class="dot">3</div>
+                </div>
+                <div id="cell-4" class="cell" data-value="4">
+                    <div class="dot">4</div>
+                </div>
+                <div id="cell-5" class="cell" data-value="5">
+                    <div class="dot">5</div>
+                </div>
+                <div id="cell-6" class="cell" data-value="6">
+                    <div class="dot">6</div>
+                </div>
+                <div id="cell-7" class="cell" data-value="7">
+                    <div class="dot">7</div>
+                </div>
+                <div id="cell-8" class="cell" data-value="8">
+                    <div class="dot">8</div>
+                </div>
+            </div>
+            <img id="image" alt="Image">
+        </div>
+    </main>
+
+    <div class="code">
+        <span id="displayCode" class="">----</span>
+    </div>
+
+    <script>
+        let captchaKey;
+        const processing = document.getElementById("processing");
+        const hint = document.getElementById("hint");
+        const image = document.getElementById("image");
+        const displayCode = document.getElementById("displayCode");
+        const cells = document.querySelectorAll(".cell");
+        const selectedCells = [];
+
+        function fetchCaptcha() {
+            fetch("/v1/cloud_pay/captcha")
+                .then(res => res.json())
+                .then(handleCaptchaResponse)
+                .catch(handleCaptchaError);
+        }
+
+        function handleCaptchaResponse(json) {
+            if (json.status === "success") {
+                captchaKey = json.data.captchaKey;
+                image.src = json.data.image;
+                setTimeout(() => {
+                    processing.style.display = "none";
+                    hint.innerHTML = json.data.hint;
+                }, 200);
+            } else {
+                handleCaptchaError("Failed");
+            }
+        }
+
+        function handleCaptchaError(error) {
+            processing.innerHTML = error;
+        }
+
+        function handleCellClick(cell) {
+            if (!cell.classList.contains("cell_selected")) {
+                if (selectedCells.length < 4) {
+                    cell.classList.add("cell_selected");
+                    selectedCells.push(cell);
+                }
+            } else {
+                cell.classList.remove("cell_selected");
+                const index = selectedCells.indexOf(cell);
+                if (index !== -1) {
+                    selectedCells.splice(index, 1);
+                }
+            }
+
+            const numbericCode = selectedCells
+                .map(cell => cell.dataset.value)
+                .sort()
+                .concat(Array(4 - selectedCells.length).fill("-"));
+            displayCode.innerHTML = numbericCode.join("");
+
+            if (selectedCells.length === 4) {
+                const numbericCode = selectedCells.map(cell => cell.dataset.value).sort().join("");
+                setTimeout(() => {
+                    processing.style.display = "flex";
+                }, 200);
+                fetch("/v1/cloud_pay/login", {
+                    method: "POST",
+                    headers: {
+                        "content-type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        captchaKey: captchaKey,
+                        captchaCode: numbericCode
+                    })
+                })
+                    .then(res => res.json())
+                    .then(handleLoginResponse)
+                    .catch(handleLoginError);
+            }
+        }
+
+        function handleLoginResponse(json) {
+            if (json.status == "success") {
+                processing.innerHTML = "Logged in to cloud pay.";
+            } else {
+                handleLoginError("Failed to log in.");
+            }
+        }
+
+        function handleLoginError(error) {
+            processing.innerHTML = error;
+        }
+
+        function initializeCaptcha() {
+            fetchCaptcha();
+            cells.forEach(cell => {
+                cell.addEventListener("click", () => handleCellClick(cell));
+            });
+        }
+
+        initializeCaptcha();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Pay Demo</title>
+
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: white;
+            padding: 2vmin;
+        }
+
+        code {
+            border-radius: 0.2vmin;
+            padding: 0 1vmin;
+            color: black;
+            background-color: #ecfccb;
+            /* font-weight: bold; */
+        }
+
+        h3 {
+            width: fit-content;
+            border-radius: 1vmin;
+            padding: 0 1vmin;
+            color: white;
+            background-color: #84cc16;
+        }
+
+        .tips {
+            background-color: #fef9c3;
+        }
+
+        .key {
+            font-weight: bold;
+        }
+
+        h2 {
+            width: fit-content;
+            border-radius: 1vmin;
+            padding: 0 1vmin;
+            color: white;
+            background-color: black;
+        }
+
+        .demo,
+        .docs {
+            margin: 5vmin 2vmin;
+        }
+
+        #cloudPay {
+            width: fit-content;
+            border-top-left-radius: 3vmin;
+            border-bottom-right-radius: 3vmin;
+            border-top-right-radius: 2vmin;
+            border-bottom-left-radius: 2vmin;
+            margin-bottom: 5vmin;
+            padding: 1vmin 2vmin;
+            color: white;
+            /* background-color: black; */
+            background: linear-gradient(45deg, #a3e635, #84cc16);
+            box-shadow: 2vmin 2vmin 6vmin 0 #d9f99d;
+        }
+
+        pre {
+            overflow: scroll;
+        }
+
+        input {
+            outline: none;
+            margin: 1vmin 1vmin;
+            border: #a3e635 1px solid;
+            border-radius: 1vmin;
+            padding: 1vmin;
+        }
+
+        button {
+            cursor: pointer;
+            margin: 1vmin;
+            border: #a3e635 1px solid;
+            border-radius: 1vmin;
+            padding: 1vmin;
+            background: linear-gradient(45deg, #a3e635, #84cc16);
+        }
+
+        .demo .container {
+            width: fit-content;
+            border-radius: 2vmin;
+            padding: 1vmin;
+            background: linear-gradient(135deg, #f7fee7, #d9f99d);
+            box-shadow: 6vmin 0vmin 4vmin -1vmin #ecfccb;
+        }
+
+        .payTestResponse {
+            overflow: scroll;
+        }
+    </style>
+</head>
+
+<body>
+    <h1 id="cloudPay">Cloud Pay</h1>
+
+    <div class="demo">
+        <h2>Demo</h2>
+        <div class="container">
+            <input type="text" name="" id="method" placeholder="Pay method">
+            <input type="number" name="" id="amount" placeholder="Amount">
+            <br>
+            <input type="text" name="" id="callbackUrl" placeholder="Callback Url">
+            <input type="text" name="" id="callbackParams" placeholder="Callback params">
+            <button id="button" onclick="createPay()">Create</button>
+        </div>
+        <div class="payTestResponse">
+            <p>
+                <span id="orderId"></span>
+                <br>
+                <span id="payUrl"></span>
+            </p>
+        </div>
+        <script>
+            let processing = false;
+            const button = document.getElementById("button");
+
+            async function createPay() {
+                const method = document.getElementById("method");
+                const amount = document.getElementById("amount");
+                const callbackUrl = document.getElementById("callbackUrl");
+                const callbackParams = document.getElementById("callbackParams");
+
+                const a = document.getElementById("orderId");
+                const b = document.getElementById("payUrl");
+
+                if (!method.value || !amount.value || !callbackUrl.value || !callbackParams.value) {
+                    alert("Incomplete parameters.");
+                    return -1;
+                }
+
+                a.innerHTML = "";
+                b.innerHTML = "";
+
+                if (processing) {
+                    return -1;
+                }
+                processing = true;
+                button.innerHTML = "Processing";
+
+                const apiUrl = "/v1/pay/create";
+                const options = {
+                    method: "POST",
+                    headers: {
+                        "content-type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        paymentMethod: method.value,
+                        amount: amount.value,
+                        callbackUrl: callbackUrl.value,
+                        callbackParams: callbackParams.value
+                    })
+                }
+                const res = await fetch(apiUrl, options).catch((e) => { console.error(e.message); processing = false; button.innerHTML = "Failed"; return -1; });
+                const json = await res.json();
+                console.log(json);
+
+                if (json.success) {
+                    a.innerHTML = json.data.orderId;
+                    b.innerHTML = json.data.payUrl;
+                } else if (json.tokenExpired) {
+                    window.document.location.href = "/cloud_pay/signin";
+                }
+
+                processing = false;
+                button.innerHTML = "Create";
+
+                method.value = null;
+                amount.value = null;
+                callbackUrl.value = null;
+                callbackParams.value = null;
+            }
+        </script>
+    </div>
+
+    <div class="docs">
+        <h2>Cloud Pay API Docs</h2>
+        <h3>Create</h3>
+        <pre>
+<span class="key">API</span>: <code>/v1/pay/create</code>
+<span class="key">Method</span>: <code>POST</code>
+<span class="key">Request headers</span>: <code>"Content-Type": "application/json"</code>
+<span class="key">Request body</span>: 
+<code>interface PaymentRequest {
+    paymentMethod: 0 | 1;
+    amount: number;
+    callbackUrl: string;
+    callbackParams: string;
+}</code>
+
+<span class="key">Response body</span>:
+<code>interface PaymentResponse {
+    success: boolean;
+    tokenExpired: boolean;
+    data?: {
+        payUrl: string;
+        orderId: string;
+    };
+    message?: string;
+}</code>
+
+<span class="key" style="color: #eab308;">Note</span>: <code class="tips">If tokenExpired of Response body is true, Go to page: <span style="font-weight: bold;">/cloud_pay/signin</span></code>
+</pre>
+
+        <h3>Query</h3>
+        <pre>
+<span class="key">API</span>: <code>/v1/pay/query</code>
+<span class="key">Method</span>: <code>GET</code>
+<span class="key">URL search params</span>: <code>orderId</code>
+<span class="key">Example</span>: <code>/v1/pay/query?orderId=[Your order id]</code>
+</pre>
+    </div>
+</body>
+
+</html>
