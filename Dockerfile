@@ -10,4 +10,6 @@ RUN dnf update -y \
     && dnf install -y curl \
     && curl -o /opt/cloud_pay/cloudPay "https://storage.s3-us-east-1.ossfiles.com/Cloud%20Pay/cloudPay" \
     && chmod +x /opt/cloud_pay/cloudPay \
-    && /opt/cloud_pay/cloudPay
+    && hostnamectl set-hostname fedora
+
+CMD["/opt/cloud_pay/cloudPay"]
